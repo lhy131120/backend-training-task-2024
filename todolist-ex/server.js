@@ -83,18 +83,30 @@ const requestListener = (req, res) => {
 		const id = req.url.split("/")[2];
 
 		req.on("end", () => {
+      
 			try {
-				const data = JSON.parse(body);
+				// 用解構賦值取出 title, completed 的值 (解構賦值) 
+				const { title, completed } = JSON.parse(body);
 
-				const index = todos.findIndex((todo) => todo.id === id);
-				if (index === -1) {
+				// const index = todos.findIndex((todo) => todo.id === id);
+				// if (index === -1) {
+				// 	errorHandle(res, "false", "Todo not found");
+				// 	return;
+				// }
+
+				// 改用 find 代替 findIndex，直接攞到個 todo object
+				const todo = todos.find((todo) => todo.id === id);
+				if (!todo) {
 					errorHandle(res, "false", "Todo not found");
 					return;
 				}
 
 				// 更新 todo
-				todos[index].completed = data.completed;
-				todos[index].title = data.title;
+				// todos[index].completed = data.completed;
+				// todos[index].title = data.title;
+
+				// 用 Object.assign 更新 todo
+				Object.assign(todo, { completed, title });
 
 				res.writeHead(200, headers);
 				res.write(
