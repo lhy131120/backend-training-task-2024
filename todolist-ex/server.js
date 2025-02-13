@@ -79,28 +79,36 @@ const requestListener = (req, res) => {
 			res.end();
 			return;
 		}
-	} else if(req.url.startsWith("/todos/") && req.method === "PATCH") {
-    const id = req.url.split("/")[2];
-    const index = todos.findIndex((todo) => todo.id === id);
-    if(index === -1) {
-      errorHandle(res, "false", "Todo not found");
-      return;
-    } else {
-      req.on("end", () => {
-        try {
-          const data = JSON.parse(body);
-          console.log(data)
-          todos[index].completed = data.completed;
-          todos[index].title = data.title;
-          res.writeHead(200, headers);
-          res.write(JSON.stringify({ status: "success", data: todos }));
-          res.end();
-        } catch (error) {
-          errorHandle(res, "error", "Invalid JSON");
-        }
-      })
-    }
-  } else {
+	} else if (req.url.startsWith("/todos/") && req.method === "PATCH") {
+		const id = req.url.split("/")[2];
+
+		req.on("end", () => {
+			try {
+				const data = JSON.parse(body);
+
+				const index = todos.findIndex((todo) => todo.id === id);
+				if (index === -1) {
+					errorHandle(res, "false", "Todo not found");
+					return;
+				}
+
+				// 更新 todo
+				todos[index].completed = data.completed;
+				todos[index].title = data.title;
+
+				res.writeHead(200, headers);
+				res.write(
+					JSON.stringify({
+						status: "success",
+						data: todos,
+					})
+				);
+				res.end();
+			} catch (error) {
+				errorHandle(res, "error", "Invalid JSON");
+			}
+		});
+	} else {
 		errorHandle(res, "false", "Route not found");
 		return;
 	}
