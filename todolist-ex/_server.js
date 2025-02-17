@@ -1,11 +1,10 @@
 const http = require("http");
 const { v4: uuidv4 } = require("uuid");
-const successHandle = require("./successHandle");
 const errorHandle = require("./errorHandle");
 
 const todos = [];
 
-const requestLister = (req, res) => {
+const requestListener = (req, res) => {
 	const headers = {
 		"Access-Control-Allow-Headers": "Content-Type, Authorization, Content-Length, X-Requested-With",
 		"Access-Control-Allow-Origin": "*",
@@ -13,86 +12,120 @@ const requestLister = (req, res) => {
 		"Content-Type": "application/json",
 	};
 
+	// 接收data
 	let body = "";
 	req.on("data", (chunk) => {
+    console.log(chunk.toString());
 		body += chunk.toString();
 	});
 
 	if (req.url === "/todos" && req.method === "GET") {
-		successHandle(res, "success", todos);
-	} else if (req.method === "OPTION") {
 		res.writeHead(200, headers);
+		res.write(
+			JSON.stringify({
+				status: "success",
+				data: todos,
+			})
+		);
 		res.end();
+		return;
 	} else if (req.url === "/todos" && req.method === "POST") {
 		req.on("end", () => {
 			try {
+				// 轉換為json - Object data
 				const data = JSON.parse(body);
-
+				// check title is exist?
 				if (!data.title || data.title.trim() === "" || data.title === undefined) {
 					errorHandle(res, "false", "欄位未填寫正確，或無此 todo id");
 					return;
 				}
 
+				// create todo
 				const todo = {
 					id: uuidv4(),
 					title: data.title.trim(),
 					completed: false,
 				};
-
 				todos.push(todo);
-				successHandle(res, "success", todos);
+				res.writeHead(200, headers);
+				res.write(
+					JSON.stringify({
+						status: "success",
+						data: todos,
+					})
+				);
+				res.end();
 			} catch (error) {
-				console.log(error);
 				errorHandle(res, "error", "Invalid JSON");
 			}
 		});
+	} else if (req.method === "OPTIONS") {
+		res.writeHead(200, headers);
+		res.end();
 	} else if (req.url === "/todos" && req.method === "DELETE") {
-		req.on("end", () => {
-			todos.length = 0;
-			successHandle(res, "success", todos);
-		});
+		todos.length = 0;
+		res.writeHead(200, headers);
+		res.write(JSON.stringify({ status: "success", data: todos }));
+		res.end();
 	} else if (req.url.startsWith("/todos/") && req.method === "DELETE") {
 		const id = req.url.split("/")[2];
 		const index = todos.findIndex((todo) => todo.id === id);
-
 		if (index === -1) {
-			errorHandle(res, "false", "Invalid: Todo Not Found");
+			errorHandle(res, "false", "Todo not found");
 			return;
 		} else {
 			todos.splice(index, 1);
-			successHandle(res, "success", todos);
+			res.writeHead(200, headers);
+			res.write(JSON.stringify({ status: "success", data: todos }));
+			res.end();
+			return;
 		}
 	} else if (req.url.startsWith("/todos/") && req.method === "PATCH") {
-    const id = req.url.split("/")[2];
+		const id = req.url.split("/")[2];
 
 		req.on("end", () => {
       
-      const {title, completed} = JSON.parse(body);
-      console.log(title, completed)
 			try {
-        
+				// 用解構賦值取出 title, completed 的值 (解構賦值) 
 				const { title, completed } = JSON.parse(body);
-        
-				const todo = todos.find((todo) => todo.id === id);
 
+				// const index = todos.findIndex((todo) => todo.id === id);
+				// if (index === -1) {
+				// 	errorHandle(res, "false", "Todo not found");
+				// 	return;
+				// }
+
+				// 改用 find 代替 findIndex，直接攞到個 todo object
+				const todo = todos.find((todo) => todo.id === id);
 				if (!todo) {
-					errorHandle(res, "false", "Todo Not Found");
+					errorHandle(res, "false", "Todo not found");
 					return;
 				}
 
+				// 更新 todo
+				// todos[index].completed = data.completed;
+				// todos[index].title = data.title;
+
+				// 用 Object.assign 更新 todo
 				Object.assign(todo, { completed, title });
 
-				successHandle(res, "success", todos);
+				res.writeHead(200, headers);
+				res.write(
+					JSON.stringify({
+						status: "success",
+						data: todos,
+					})
+				);
+				res.end();
 			} catch (error) {
 				errorHandle(res, "error", "Invalid JSON");
 			}
 		});
 	} else {
-		errorHandle(res, "false", "Router Not Found");
+		errorHandle(res, "false", "Route not found");
 		return;
 	}
 };
+const server = http.createServer(requestListener);
 
-const server = http.createServer(requestLister);
-
-server.listen(4060);
+server.listen(3005);
